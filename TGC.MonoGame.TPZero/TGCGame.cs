@@ -22,8 +22,12 @@ namespace TGC.MonoGame.TP
         private GraphicsDeviceManager Graphics { get; }
         private CityScene City { get; set; }
         private Model CarModel { get; set; }
+        private Effect CarEffect { get; set; }
         private Matrix CarWorld { get; set; }
         private FollowCamera FollowCamera { get; set; }
+
+        private float Rotation { get; set; }
+        private Vector3 Posicion { get; set; } = Vector3.Zero;
 
 
         /// <summary>
@@ -59,11 +63,11 @@ namespace TGC.MonoGame.TP
             Graphics.PreferredBackBufferHeight = GraphicsAdapter.DefaultAdapter.CurrentDisplayMode.Height - 100;
             Graphics.ApplyChanges();
 
-            // Creo una camaar para seguir a nuestro auto
-            FollowCamera = new FollowCamera(GraphicsDevice.Viewport.AspectRatio);
-
             // Configuro la matriz de mundo del auto
             CarWorld = Matrix.Identity;
+
+            // Creo una camara para seguir a nuestro auto
+            FollowCamera = new FollowCamera(GraphicsDevice.Viewport.AspectRatio);         
 
             base.Initialize();
         }
@@ -78,6 +82,16 @@ namespace TGC.MonoGame.TP
             City = new CityScene(Content);
 
             // La carga de contenido debe ser realizada aca
+
+            CarModel = Content.Load<Model>(ContentFolder3D + "scene/car");
+            CarEffect = Content.Load<Effect>(ContentFolderEffects + "BasicShader");
+
+            // Asigno el efecto que cargue a cada parte del mesh.
+            // Un modelo puede tener mas de 1 mesh internamente.
+            foreach (var mesh in CarModel.Meshes)
+                // Un mesh puede tener mas de 1 mesh part (cada 1 puede tener su propio efecto).
+                foreach (var meshPart in mesh.MeshParts)
+                    meshPart.Effect = CarEffect;
 
             base.LoadContent();
         }
@@ -96,8 +110,21 @@ namespace TGC.MonoGame.TP
 
             // La logica debe ir aca
 
+            if (Keyboard.GetState().IsKeyDown(Keys.A))
+                Rotation += Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 3f;
+
+            if (Keyboard.GetState().IsKeyDown(Keys.D))
+                Rotation -= Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 3f;
+
+            if (Keyboard.GetState().IsKeyDown(Keys.W))
+                Posicion += Vector3.Transform(Vector3.Forward, Matrix.CreateRotationY(Rotation)) * Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 500f;
+
+            if (Keyboard.GetState().IsKeyDown(Keys.S))
+                Posicion += Vector3.Transform(Vector3.Backward, Matrix.CreateRotationY(Rotation)) * Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 500f;
+
             // Actualizo la camara, enviandole la matriz de mundo del auto
-            FollowCamera.Update(gameTime, CarWorld);
+            if (keyboardState.IsKeyDown(Keys.X))
+                FollowCamera.Update(gameTime, CarWorld);
 
             base.Update(gameTime);
         }
@@ -115,7 +142,17 @@ namespace TGC.MonoGame.TP
             // Dibujo la ciudad
             City.Draw(gameTime, FollowCamera.View, FollowCamera.Projection);
 
+            var rotationMatrix = Matrix.CreateRotationY(Rotation);
+            var traslacionMatrix = Matrix.CreateTranslation(Posicion);
+
             // El dibujo del auto debe ir aca
+
+            foreach (var mesh in CarModel.Meshes)
+            {
+                CarWorld = mesh.ParentBone.Transform * rotationMatrix * traslacionMatrix;
+                CarEffect.Parameters["World"].SetValue(CarWorld);
+                mesh.Draw();
+            }
 
             base.Draw(gameTime);
         }
