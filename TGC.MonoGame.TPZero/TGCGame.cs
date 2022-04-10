@@ -26,8 +26,11 @@ namespace TGC.MonoGame.TP
         private Matrix CarWorld { get; set; }
         private FollowCamera FollowCamera { get; set; }
 
-        private float Rotation { get; set; }
-        private Vector3 Posicion { get; set; } = Vector3.Zero;
+        private Matrix CarRotation { get; set; }
+        private Vector3 CarPosition { get; set; }
+        private Vector3 CarVelocity { get; set; }
+        private Vector3 CarAcceleration { get; set; }
+        private Vector3 CarDirection { get; set; }
 
 
         /// <summary>
@@ -67,7 +70,18 @@ namespace TGC.MonoGame.TP
             CarWorld = Matrix.Identity;
 
             // Creo una camara para seguir a nuestro auto
-            FollowCamera = new FollowCamera(GraphicsDevice.Viewport.AspectRatio);         
+            FollowCamera = new FollowCamera(GraphicsDevice.Viewport.AspectRatio);
+
+            
+            //Inicializo la posicion del auto
+            CarPosition = Vector3.Zero;
+            CarRotation = Matrix.Identity;
+            CarDirection = Vector3.Backward;
+
+            // Set the Acceleration (which in this case won't change) to the Gravity pointing down
+            CarAcceleration = Vector3.Down * 350f;
+            // Initialize the Velocity as zero
+            CarVelocity = Vector3.Zero;
 
             base.Initialize();
         }
@@ -110,17 +124,19 @@ namespace TGC.MonoGame.TP
 
             // La logica debe ir aca
 
+            float unidad = Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds);
+
             if (Keyboard.GetState().IsKeyDown(Keys.A))
-                Rotation += Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 3f;
+                CarRotation *= Matrix.CreateRotationY(unidad * 3f);
 
             if (Keyboard.GetState().IsKeyDown(Keys.D))
-                Rotation -= Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 3f;
+                CarRotation *= Matrix.CreateRotationY(-unidad * 3f);
 
             if (Keyboard.GetState().IsKeyDown(Keys.W))
-                Posicion += Vector3.Transform(Vector3.Forward, Matrix.CreateRotationY(Rotation)) * Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 500f;
+                CarPosition += Vector3.Transform(Vector3.Forward, CarRotation) * unidad * 500f;
 
             if (Keyboard.GetState().IsKeyDown(Keys.S))
-                Posicion += Vector3.Transform(Vector3.Backward, Matrix.CreateRotationY(Rotation)) * Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds) * 500f;
+                CarPosition += Vector3.Transform(Vector3.Backward, CarRotation) * unidad * 500f;
 
             // Actualizo la camara, enviandole la matriz de mundo del auto
             if (keyboardState.IsKeyDown(Keys.X))
@@ -142,14 +158,13 @@ namespace TGC.MonoGame.TP
             // Dibujo la ciudad
             City.Draw(gameTime, FollowCamera.View, FollowCamera.Projection);
 
-            var rotationMatrix = Matrix.CreateRotationY(Rotation);
-            var traslacionMatrix = Matrix.CreateTranslation(Posicion);
+            var traslacionMatrix = Matrix.CreateTranslation(CarPosition);
 
             // El dibujo del auto debe ir aca
 
             foreach (var mesh in CarModel.Meshes)
             {
-                CarWorld = mesh.ParentBone.Transform * rotationMatrix * traslacionMatrix;
+                CarWorld = mesh.ParentBone.Transform * CarRotation * traslacionMatrix;
                 CarEffect.Parameters["World"].SetValue(CarWorld);
                 mesh.Draw();
             }
