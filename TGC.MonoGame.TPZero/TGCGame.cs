@@ -28,9 +28,6 @@ namespace TGC.MonoGame.TP
 
         private Matrix CarRotation { get; set; }
         private Vector3 CarPosition { get; set; }
-        private Vector3 CarVelocity { get; set; }
-        private Vector3 CarAcceleration { get; set; }
-        private Vector3 CarDirection { get; set; }
 
 
         /// <summary>
@@ -76,12 +73,6 @@ namespace TGC.MonoGame.TP
             //Inicializo la posicion del auto
             CarPosition = Vector3.Zero;
             CarRotation = Matrix.Identity;
-            CarDirection = Vector3.Backward;
-
-            // Set the Acceleration (which in this case won't change) to the Gravity pointing down
-            CarAcceleration = Vector3.Down * 350f;
-            // Initialize the Velocity as zero
-            CarVelocity = Vector3.Zero;
 
             base.Initialize();
         }
@@ -124,7 +115,7 @@ namespace TGC.MonoGame.TP
 
             // La logica debe ir aca
 
-            float unidad = Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds);
+            var unidad = Convert.ToSingle(gameTime.ElapsedGameTime.TotalSeconds);
 
             if (Keyboard.GetState().IsKeyDown(Keys.A))
                 CarRotation *= Matrix.CreateRotationY(unidad * 3f);
@@ -139,7 +130,8 @@ namespace TGC.MonoGame.TP
                 CarPosition += Vector3.Transform(Vector3.Backward, CarRotation) * unidad * 500f;
 
             // Actualizo la camara, enviandole la matriz de mundo del auto
-            if (keyboardState.IsKeyDown(Keys.X))
+            //si no hago esto, la camara se me va al infinito, no se porque. Hay que apretar spacebar para que aparezca todo y no tocarlo mas
+            if (keyboardState.IsKeyDown(Keys.Space))
                 FollowCamera.Update(gameTime, CarWorld);
 
             base.Update(gameTime);
