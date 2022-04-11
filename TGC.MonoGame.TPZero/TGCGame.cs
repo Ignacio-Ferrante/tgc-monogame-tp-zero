@@ -22,7 +22,6 @@ namespace TGC.MonoGame.TP
         private GraphicsDeviceManager Graphics { get; }
         private CityScene City { get; set; }
         private Model CarModel { get; set; }
-        private Effect CarEffect { get; set; }
         private Matrix CarWorld { get; set; }
         private FollowCamera FollowCamera { get; set; }
 
@@ -87,16 +86,7 @@ namespace TGC.MonoGame.TP
             City = new CityScene(Content);
 
             // La carga de contenido debe ser realizada aca
-
             CarModel = Content.Load<Model>(ContentFolder3D + "scene/car");
-            CarEffect = Content.Load<Effect>(ContentFolderEffects + "BasicShader");
-
-            // Asigno el efecto que cargue a cada parte del mesh.
-            // Un modelo puede tener mas de 1 mesh internamente.
-            foreach (var mesh in CarModel.Meshes)
-                // Un mesh puede tener mas de 1 mesh part (cada 1 puede tener su propio efecto).
-                foreach (var meshPart in mesh.MeshParts)
-                    meshPart.Effect = CarEffect;
 
             base.LoadContent();
         }
@@ -129,10 +119,10 @@ namespace TGC.MonoGame.TP
             if (Keyboard.GetState().IsKeyDown(Keys.S))
                 CarPosition += Vector3.Transform(Vector3.Backward, CarRotation) * unidad * 500f;
 
+            CarWorld = CarRotation * Matrix.CreateTranslation(CarPosition);
+
             // Actualizo la camara, enviandole la matriz de mundo del auto
-            //si no hago esto, la camara se me va al infinito, no se porque. Hay que apretar spacebar para que aparezca todo y no tocarlo mas
-            if (keyboardState.IsKeyDown(Keys.Space))
-                FollowCamera.Update(gameTime, CarWorld);
+            FollowCamera.Update(gameTime, CarWorld);
 
             base.Update(gameTime);
         }
@@ -150,16 +140,8 @@ namespace TGC.MonoGame.TP
             // Dibujo la ciudad
             City.Draw(gameTime, FollowCamera.View, FollowCamera.Projection);
 
-            var traslacionMatrix = Matrix.CreateTranslation(CarPosition);
-
             // El dibujo del auto debe ir aca
-
-            foreach (var mesh in CarModel.Meshes)
-            {
-                CarWorld = mesh.ParentBone.Transform * CarRotation * traslacionMatrix;
-                CarEffect.Parameters["World"].SetValue(CarWorld);
-                mesh.Draw();
-            }
+            CarModel.Draw(CarWorld, FollowCamera.View, FollowCamera.Projection);
 
             base.Draw(gameTime);
         }
